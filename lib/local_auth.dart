@@ -124,4 +124,8 @@ class LocalAuthentication {
     });
     return biometrics;
   }
+
+  /// Returns list of enrolled biometrics id's
+  Future<List<int>> get enrolledBiometricIds async =>
+      (await _channel.invokeListMethod<int>('enrolledBiometricIds'));
 }
