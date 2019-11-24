@@ -7,7 +7,6 @@ package io.flutter.plugins.localauth;
 import android.app.Activity;
 import android.content.Context;
 import android.content.pm.PackageManager;
-import android.hardware.fingerprint.FingerprintManager;
 import android.os.Build;
 import androidx.fragment.app.FragmentActivity;
 import androidx.biometric.BiometricManager;
@@ -17,8 +16,6 @@ import io.flutter.plugin.common.MethodChannel.MethodCallHandler;
 import io.flutter.plugin.common.MethodChannel.Result;
 import io.flutter.plugin.common.PluginRegistry.Registrar;
 import io.flutter.plugins.localauth.AuthenticationHelper.AuthCompletionHandler;
-import java.lang.reflect.Method;
-import java.util.List;
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -117,39 +114,6 @@ public class LocalAuthPlugin implements MethodCallHandler {
           }
         }
         result.success(biometrics);
-      } catch (Exception e) {
-        result.error("no_biometrics_available", e.getMessage(), null);
-      }
-    } else if (call.method.equals("enrolledBiometricIds")) {
-      try {
-        Activity activity = registrar.activity();
-        if (activity == null || activity.isFinishing()) {
-          result.error("no_activity", "local_auth plugin requires a foreground activity", null);
-          return;
-        }
-        List enrolledBiometricIds = new ArrayList();
-        final BiometricManager biometricManager = BiometricManager.from(activity);
-        if(biometricManager.canAuthenticate() == BiometricManager.BIOMETRIC_SUCCESS){
-          FingerprintManager fingerprintManager = (FingerprintManager) activity.getSystemService(Context.FINGERPRINT_SERVICE);
-          Method method = FingerprintManager.class.getDeclaredMethod("getEnrolledFingerprints");
-          Object obj = method.invoke(fingerprintManager);
-
-          if (obj != null) {
-            Class<?> fingerprint = Class.forName("android.hardware.fingerprint.Fingerprint");
-            Method getFingerId = fingerprint.getDeclaredMethod("getFingerId");
-
-            for (int i = 0; i < ((List) obj).size(); i++)
-            {
-              Object item = ((List) obj).get(i);
-              if(item != null)
-              {
-                int fingerId = (int) getFingerId.invoke(item);
-                enrolledBiometricIds.add(fingerId);
-              }
-            }
-          }
-        }
-        result.success(enrolledBiometricIds);
       } catch (Exception e) {
         result.error("no_biometrics_available", e.getMessage(), null);
       }
