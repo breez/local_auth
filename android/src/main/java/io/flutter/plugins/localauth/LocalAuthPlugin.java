@@ -24,6 +24,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class LocalAuthPlugin implements MethodCallHandler {
   private final Registrar registrar;
   private final AtomicBoolean authInProgress = new AtomicBoolean(false);
+  private AuthenticationHelper authenticationHelper;
 
   /** Plugin registration. */
   public static void registerWith(Registrar registrar) {
@@ -39,7 +40,7 @@ public class LocalAuthPlugin implements MethodCallHandler {
   @Override
   public void onMethodCall(MethodCall call, final Result result) {
     if (call.method.equals("authenticateWithBiometrics")) {
-      if (!authInProgress.compareAndSet(false, true)) {
+      if (authInProgress.get()) {
         // Apps should not invoke another authentication request while one is in progress,
         // so we classify this as an error condition. If we ever find a legitimate use case for
         // this, we can try to cancel the ongoing auth and start a new one but for now, not worth
@@ -61,7 +62,8 @@ public class LocalAuthPlugin implements MethodCallHandler {
             null);
         return;
       }
-      AuthenticationHelper authenticationHelper =
+      authInProgress.set(true);
+      authenticationHelper =
           new AuthenticationHelper(
               (FragmentActivity) activity,
               call,
@@ -117,8 +119,27 @@ public class LocalAuthPlugin implements MethodCallHandler {
       } catch (Exception e) {
         result.error("no_biometrics_available", e.getMessage(), null);
       }
+    } else if (call.method.equals(("stopAuthentication"))) {
+      stopAuthentication(result);
     } else {
       result.notImplemented();
+    }
+  }
+
+  /*
+   Stops the authentication if in progress.
+  */
+  private void stopAuthentication(Result result) {
+    try {
+      if (authenticationHelper != null && authInProgress.get()) {
+        authenticationHelper.stopAuthentication();
+        authenticationHelper = null;
+        result.success(true);
+        return;
+      }
+      result.success(false);
+    } catch (Exception e) {
+      result.success(false);
     }
   }
 }
